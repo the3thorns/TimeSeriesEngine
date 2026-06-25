@@ -1,0 +1,1 @@
+add_library(TimeSeriesEngine_Core BitBufferVector.cpp)
