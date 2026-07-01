@@ -7,4 +7,4 @@ target_link_libraries(tests PRIVATE
         gtest
         gtest_main
 )
-target_include_directories(tests PRIVATE "${CMAKE_SOURCE_DIR}/src/core")
+target_include_directories(tests PRIVATE "${CMAKE_SOURCE_DIR}/src")

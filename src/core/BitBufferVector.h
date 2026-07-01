@@ -8,22 +8,47 @@
 #include <vector>
 #include <span>
 #include <cstdint>
-#include <limits>
 #include <expected>
-#include <concepts>
 
 namespace tsdb::core {
 
 class BitBufferVector {
 public:
-
   enum class Error : std::uint8_t {
     Ok,
     OutOfBounds,
     WrongBitSize,
   };
+ class Iterator {
+  public:
+   Iterator() = default;
+   explicit Iterator(std::byte* addr);
+   Iterator(std::byte* addr, uint8_t bit_index);
 
-  BitBufferVector() = default;
+   // Peeks the next bits, but it does not advance the iterator
+   [[nodiscard]] std::expected<uint64_t, Error> peek(uint8_t bits) const;
+
+   // Peeks and advances the iterator
+   [[nodiscard]] std::expected<uint64_t, Error> next(uint8_t bits);
+
+   bool operator==(const Iterator& other) const {
+     return pointer_ == other.pointer_ && bit_index_ == other.bit_index_;
+   }
+
+   bool operator!=(const Iterator& other) const {
+     return pointer_ != other.pointer_ || bit_index_ != other.bit_index_;
+   }
+
+  private:
+   std::byte* pointer_{};
+   std::size_t bit_index_{};
+/*
+  testing:
+*/
+   friend struct TestIterator;
+ };
+
+ BitBufferVector() = default;
   explicit BitBufferVector(std::size_t capacity);
 
   // bit_count represents the number of significant bits
@@ -31,15 +56,18 @@ public:
   //     ^^^^^^
   [[nodiscard]] Error append(std::uint64_t value, std::uint8_t bit_count);
 
-  [[nodiscard]] std::size_t size_bytes() const noexcept { return buffer_.size(); }
-  [[nodiscard]] std::size_t size_bits() const noexcept { return size_bits_; }
-  [[nodiscard]] std::uint8_t size_remainder() const noexcept { return static_cast<std::uint8_t>(size_bits_ - buffer_.size()); }
-  [[nodiscard]] std::size_t capacity_bytes() const noexcept { return buffer_.capacity(); }
-  [[nodiscard]] bool empty() const noexcept { return size_bits_ == 0; }
+  std::size_t size_bytes() const noexcept { return buffer_.size(); }
+  std::size_t size_bits() const noexcept { return size_bits_; }
+  std::uint8_t size_remainder() const noexcept { return static_cast<std::uint8_t>(size_bits_ - buffer_.size()); }
+  std::size_t capacity_bytes() const noexcept { return buffer_.capacity(); }
+  bool is_empty() const noexcept { return size_bits_ == 0; }
 
-  [[nodiscard]] std::span<const std::byte> span() const noexcept { return std::span{buffer_}; }
-  [[nodiscard]] std::expected<std::byte, Error> byte_at(std::size_t index) const;
-  [[nodiscard]] std::expected<std::byte, Error> bit_at(std::size_t index) const;
+  std::span<const std::byte> span() const noexcept { return std::span{buffer_}; }
+  std::expected<std::byte, Error> byte_at(std::size_t index) const;
+  std::expected<std::byte, Error> bit_at(std::size_t index) const;
+
+  Iterator begin() noexcept { return Iterator{&buffer_[0]}; }
+  Iterator end() noexcept { return Iterator{&buffer_[buffer_.size() - 1], size_remainder()}; }
 
 private:
   std::size_t size_bits_{};
