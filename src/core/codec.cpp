@@ -17,12 +17,12 @@ void GorillaCodec::compress(const TimeMark mark, BitBuffer& writer) {
     // Prev timestamp must be the block header
     // Append header for the decompressor to do the job
     writer.append(prev_timestamp_, 64);
+    prev_delta_ = mark.time - prev_timestamp_;
 
-    writer.append(mark.time, 14);
+    writer.append(prev_delta_, 14);
 
     writer.append(std::bit_cast<uint64_t>(mark.value), 64);
 
-    prev_delta_ = mark.time - prev_timestamp_;
     prev_timestamp_ = mark.time;
     prev_value_ = mark.value;
   } else {
@@ -78,16 +78,23 @@ void GorillaCodec::compress(const TimeMark mark, BitBuffer& writer) {
         writer.append(xored_value, significant_bits_len + 2);
       } else {
         uint8_t significant_bits_len = 64 - trailing_zeros - leading_zeros;
-        uint64_t val = leading_zeros;
-        val <<= 6;
-        val |= significant_bits_len;
-        val <<= significant_bits_len;
+        const uint8_t trailing_bits_to_append = 2 + 6 + 5 + significant_bits_len;
 
         xored_value >>= trailing_zeros;
         xored_value = utils::mask_trailing_bits(xored_value, significant_bits_len);
-        val |= xored_value;
-        val |= 3 << (6 + 5 + significant_bits_len);
-        writer.append(val, 2 + 6 + 5 + significant_bits_len);
+
+        uint64_t val = 3 << 11; // 6144
+        val |= leading_zeros << 6;
+        val |= significant_bits_len;
+        if (trailing_bits_to_append <= 64) {
+          val <<= significant_bits_len;
+          val |= xored_value;
+
+          writer.append(val, trailing_bits_to_append);
+        } else {
+          writer.append(val, 13);
+          writer.append(xored_value, significant_bits_len);
+        }
 
         prev_leading_zeros_ = leading_zeros;
         prev_trailing_zeros_ = trailing_zeros;

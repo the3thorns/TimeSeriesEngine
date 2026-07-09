@@ -74,9 +74,7 @@ TEST_F(CodecTest, GorillaConstructor) {
   ASSERT_EQ(tester.prev_timestamp, header) << "Codec could not assign header as its first timestamp";
 }
 
-
-
-TEST_F(CodecTest, GorillaCompressDecompress) {
+TEST_F(CodecTest, GorillaCompressDecompressSintetic) {
 
   codec = tsdb::core::GorillaCodec{header};
   std::vector<TimeMark> output;
@@ -89,16 +87,16 @@ TEST_F(CodecTest, GorillaCompressDecompress) {
   //ASSERT_NO_THROW(tsdb::core::GorillaCodec::decompress(buffer, output)) << "Exception was thrown when it shouldn't";
   tsdb::core::GorillaCodec::decompress(buffer, output);
 
-  std::cout << "This is the original array:\n";
-  for (const auto& [time, value] : marks) {
-    std::cout << "{" << time << ", " << value << "}" << std::endl;
-  }
-  std::cout << "This is the compressed array\n";
+  //std::cout << "This is the original array:\n";
+  //for (const auto& [time, value] : marks) {
+  //  std::cout << "{" << time << ", " << value << "}" << std::endl;
+  //}
+  //std::cout << "This is the compressed array\n";
   //print_bit_buffer(buffer);
-  std::cout << "This is the output vector\n";
-  for (const auto& [time, value] : output) {
-    std::cout << "{" << time << ", " << value << "}" << std::endl;
-  }
+  //std::cout << "This is the output vector\n";
+  //for (const auto& [time, value] : output) {
+  //  std::cout << "{" << time << ", " << value << "}" << std::endl;
+  //}
 
   EXPECT_EQ(marks_size, output.size()) << "Output vector and mark vector do not have the same size";
   for (size_t i = 0; i < marks_size; i+=1) {
@@ -107,5 +105,50 @@ TEST_F(CodecTest, GorillaCompressDecompress) {
     EXPECT_EQ(original_mark.time, decompressed_mark.time) << "Decompressed marks do not match original marks";
     EXPECT_EQ(original_mark.value, decompressed_mark.value) << "Decompressed marks do not match original marks";
   }
+}
 
+TEST_F(CodecTest, GorillaCompressDecompressUnixTimestamps) {
+
+  constexpr timestamp unix_header = {1752055200u};
+  constexpr TimeMark unix_marks[] = {
+    {1752055260u, 1.0e100},
+    {1752055320u, 1.0e100},
+    {1752055380u, 3.14e180},
+    {1752055440u, 8.88e250},
+    {1752055500u, 5},
+    {1752055560u, 5}
+  };
+  constexpr size_t unix_marks_size = 6;
+
+  codec = tsdb::core::GorillaCodec{unix_header};
+  std::vector<TimeMark> output;
+  output.resize(unix_marks_size, {0, 0});
+
+  for (auto& mark : unix_marks) {
+    ASSERT_NO_THROW(
+      codec.compress(mark, buffer)
+    ) <<  "Exception was thrown when it shouldn't";
+  }
+
+  //ASSERT_NO_THROW(tsdb::core::GorillaCodec::decompress(buffer, output)) << "Exception was thrown when it shouldn't";
+  tsdb::core::GorillaCodec::decompress(buffer, output);
+
+  //std::cout << "This is the original array:\n";
+  //for (const auto& [time, value] : unix_marks) {
+  //  std::cout << "{" << time << ", " << value << "}" << std::endl;
+  //}
+  //std::cout << "This is the compressed array\n";
+  //print_bit_buffer(buffer);
+  //std::cout << "This is the output vector\n";
+  //for (const auto& [time, value] : output) {
+  //  std::cout << "{" << time << ", " << value << "}" << std::endl;
+  //}
+
+  EXPECT_EQ(unix_marks_size, output.size()) << "Output vector and mark vector do not have the same size";
+  for (size_t i = 0; i < unix_marks_size; i+=1) {
+    const auto original_mark = unix_marks[i];
+    const auto decompressed_mark = output[i];
+    EXPECT_EQ(original_mark.time, decompressed_mark.time) << "Decompressed marks do not match original marks";
+    EXPECT_EQ(original_mark.value, decompressed_mark.value) << "Decompressed marks do not match original marks";
+  }
 }
