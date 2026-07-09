@@ -12,5 +12,7 @@ target_sources(TimeSeriesEngine
 add_subdirectory(src)
 target_link_libraries(TimeSeriesEngine PRIVATE TimeSeriesEngine_Core)
 target_include_directories(TimeSeriesEngine PRIVATE src)
+add_compile_options(-Wall -Wextra -Werror -pedantic -O2)
 
 add_subdirectory("${CMAKE_SOURCE_DIR}/tests")
+

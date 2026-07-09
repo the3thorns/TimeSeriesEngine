@@ -6,6 +6,7 @@
 #define TIMESERIESENGINE_CORE_H
 
 #include "types.h"
-#include "BitBufferVector.h"
+#include "codec.h"
+#include "BitBuffer.h"
 
 #endif  // TIMESERIESENGINE_CORE_H

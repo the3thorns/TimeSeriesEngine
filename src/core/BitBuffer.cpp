@@ -2,30 +2,38 @@
 // Created by thorns on 24/6/26.
 //
 
-#include "BitBufferVector.h"
+#include "BitBuffer.h"
+
 #include <utils/bit.h>
+
+#include <exception>
+#include <stdexcept>
 
 namespace utils = tsdb::utils;
 
 namespace tsdb::core {
 
-BitBufferVector::BitBufferVector(const std::size_t capacity) {
+BitBuffer::BitBuffer() {
+  buffer_.reserve(BitBuffer::initial_byte_capacity);
+}
+
+BitBuffer::BitBuffer(const std::size_t capacity) {
   buffer_.reserve(capacity);
 }
 
-std::expected<std::byte, BitBufferVector::Error> BitBufferVector::byte_at(
+std::byte BitBuffer::byte_at(
     const std::size_t index) const {
   if (index >= buffer_.size()) {
-    return std::unexpected{Error::OutOfBounds};
+    throw std::out_of_range{"Index was out of range"};
   }
 
   return buffer_[index];
 }
 
-std::expected<std::byte, BitBufferVector::Error> BitBufferVector::bit_at(
+std::byte BitBuffer::bit_at(
     const std::size_t index) const {
   if (index > size_bits_) {
-    return std::unexpected{Error::OutOfBounds};
+    throw std::out_of_range{"Index was out of range"};
   }
   const std::size_t at = index >> 3;
   const std::size_t diff = index - (at << 3);
@@ -35,9 +43,9 @@ std::expected<std::byte, BitBufferVector::Error> BitBufferVector::bit_at(
   return targeted;
 }
 
-BitBufferVector::Error BitBufferVector::append(const std::uint64_t value,
+void BitBuffer::append(const std::uint64_t value,
                                                const std::uint8_t trailing_bits) {
-  if (trailing_bits > sizeof(value) * 8) return Error::WrongBitSize;
+  if (trailing_bits > sizeof(value) * 8) throw std::runtime_error("BitBuffer::append: Wrong bit size");
 
   uint8_t bits_inserted {};
   auto bit_index { size_bits_ };
@@ -75,16 +83,14 @@ BitBufferVector::Error BitBufferVector::append(const std::uint64_t value,
   }
 
   size_bits_ += trailing_bits;
-
-  return Error::Ok;
 }
 
-BitBufferVector::Iterator::Iterator(std::byte* addr) : pointer_{addr} {}
+BitBuffer::ConstIterator::ConstIterator(const std::byte* addr) : pointer_{addr} {}
 
-BitBufferVector::Iterator::Iterator(std::byte* addr, uint8_t bit_index) : pointer_{addr}, bit_index_{bit_index} {}
+BitBuffer::ConstIterator::ConstIterator(const std::byte* addr, const size_t bit_index) : pointer_{addr}, bit_index_{bit_index} {}
 
-std::expected<uint64_t, BitBufferVector::Error> BitBufferVector::Iterator::peek(const uint8_t bits) const {
-  if (bits > sizeof(uint64_t) * 8 || bits < 0) return std::unexpected{Error::WrongBitSize};
+uint64_t BitBuffer::ConstIterator::peek(const uint8_t bits) const {
+  if (bits > sizeof(uint64_t) * 8 || bits < 0) throw std::runtime_error{"BitBuffer::ConstIterator::peek: Wrong bit size"};
 
   auto bit_index {bit_index_};
   auto pointer {pointer_};
@@ -117,15 +123,27 @@ std::expected<uint64_t, BitBufferVector::Error> BitBufferVector::Iterator::peek(
   return peeked_value;
 }
 
-std::expected<uint64_t, BitBufferVector::Error> BitBufferVector::Iterator::next(const uint8_t bits) {
-  auto expect = peek(bits);
-  if (expect) {
-    const auto new_bit_index = bit_index_ + bits;
-    pointer_ += (new_bit_index >> 3) - (bit_index_ >> 3);
-    bit_index_ += bits;
-    return expect.value();
-  }
-  return std::unexpected{expect.error()};
+std::byte BitBuffer::ConstIterator::peek_bit() const {
+  const auto rel = 8 - bit_index_ % 8;
+  auto byte = *pointer_;
+  byte >>= rel - 1;
+  byte = std::byte{utils::mask_trailing_bits<uint8_t>(static_cast<uint8_t>(byte), 1u)};
+  return byte;
+}
+
+uint64_t BitBuffer::ConstIterator::next(const uint8_t bits) {
+  const auto value = peek(bits);
+  const auto new_bit_index = bit_index_ + bits;
+  pointer_ += (new_bit_index >> 3) - (bit_index_ >> 3);
+  bit_index_ += bits;
+  return value;
+}
+
+std::byte BitBuffer::ConstIterator::next_bit() {
+  const auto byte = peek_bit();
+  pointer_ += ((bit_index_ + 1) >> 3) - (bit_index_ >> 3);
+  bit_index_ += 1;
+  return byte;
 }
 
 }  // namespace tsdb::core
