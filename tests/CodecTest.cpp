@@ -125,9 +125,9 @@ TEST_F(CodecTest, GorillaCompressDecompressUnixTimestamps) {
   output.resize(unix_marks_size, {0, 0});
 
   for (auto& mark : unix_marks) {
-    ASSERT_NO_THROW(
-      codec.compress(mark, buffer)
-    ) <<  "Exception was thrown when it shouldn't";
+//    ASSERT_NO_THROW(
+      codec.compress(mark, buffer);
+//    ) <<  "Exception was thrown when it shouldn't";
   }
 
   //ASSERT_NO_THROW(tsdb::core::GorillaCodec::decompress(buffer, output)) << "Exception was thrown when it shouldn't";

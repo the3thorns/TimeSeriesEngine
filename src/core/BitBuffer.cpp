@@ -85,6 +85,37 @@ void BitBuffer::append(const std::uint64_t value,
   size_bits_ += trailing_bits;
 }
 
+void BitBuffer::clear() {
+  size_bits_ = 0;
+  buffer_.clear();
+}
+
+std::size_t BitBuffer::size_bytes() const noexcept { return buffer_.size(); }
+
+std::size_t BitBuffer::size_bits() const noexcept { return size_bits_; }
+
+std::uint8_t BitBuffer::size_remainder() const noexcept { return static_cast<std::uint8_t>(size_bits_ - buffer_.size()); }
+
+std::size_t BitBuffer::capacity_bytes() const noexcept { return buffer_.capacity(); }
+
+bool BitBuffer::is_empty() const noexcept { return size_bits_ == 0; }
+
+std::span<const std::byte> BitBuffer::span() const noexcept { return std::span{buffer_}; }
+
+BitBuffer::ConstIterator BitBuffer::cbegin() const noexcept {
+  if (buffer_.empty()) {
+    return ConstIterator{nullptr};
+  }
+  return ConstIterator{&buffer_.front()};
+}
+
+BitBuffer::ConstIterator BitBuffer::cend() const noexcept {
+  if (buffer_.empty()) {
+    return ConstIterator{nullptr};
+  }
+  return ConstIterator{&buffer_.back(), size_bits_};
+}
+
 BitBuffer::ConstIterator::ConstIterator(const std::byte* addr) : pointer_{addr} {}
 
 BitBuffer::ConstIterator::ConstIterator(const std::byte* addr, const size_t bit_index) : pointer_{addr}, bit_index_{bit_index} {}
@@ -144,6 +175,14 @@ std::byte BitBuffer::ConstIterator::next_bit() {
   pointer_ += ((bit_index_ + 1) >> 3) - (bit_index_ >> 3);
   bit_index_ += 1;
   return byte;
+}
+
+bool BitBuffer::ConstIterator::operator==(const ConstIterator& other) const noexcept {
+  return bit_index_ == other.bit_index_;
+}
+
+bool BitBuffer::ConstIterator::operator!=(const ConstIterator& other) const noexcept {
+  return bit_index_ != other.bit_index_;
 }
 
 }  // namespace tsdb::core

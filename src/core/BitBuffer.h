@@ -40,13 +40,9 @@ public:
 
    std::byte next_bit();
 
-   bool operator==(const ConstIterator& other) const {
-     return pointer_ == other.pointer_ && bit_index_ == other.bit_index_;
-   }
+   bool operator==(const ConstIterator& other) const noexcept;
 
-   bool operator!=(const ConstIterator& other) const {
-     return pointer_ != other.pointer_ || bit_index_ != other.bit_index_;
-   }
+   bool operator!=(const ConstIterator& other) const noexcept;
 
   private:
    const std::byte* pointer_{};
@@ -68,29 +64,20 @@ public:
   // 0b00111111 The number of significant bits is 6 in this case, but it could be less
   //     ^^^^^^
   void append(std::uint64_t value, std::uint8_t bit_count);
+  void clear();
 
-  [[nodiscard]] std::size_t size_bytes() const noexcept { return buffer_.size(); }
-  [[nodiscard]] std::size_t size_bits() const noexcept { return size_bits_; }
-  [[nodiscard]] std::uint8_t size_remainder() const noexcept { return static_cast<std::uint8_t>(size_bits_ - buffer_.size()); }
-  [[nodiscard]] std::size_t capacity_bytes() const noexcept { return buffer_.capacity(); }
-  [[nodiscard]] bool is_empty() const noexcept { return size_bits_ == 0; }
+  [[nodiscard]] std::size_t size_bytes() const noexcept;
+  [[nodiscard]] std::size_t size_bits() const noexcept;
+  [[nodiscard]] std::uint8_t size_remainder() const noexcept;
+  [[nodiscard]] std::size_t capacity_bytes() const noexcept;
+  [[nodiscard]] bool is_empty() const noexcept;
 
-  [[nodiscard]] std::span<const std::byte> span() const noexcept { return std::span{buffer_}; }
+  [[nodiscard]] std::span<const std::byte> span() const noexcept;
   [[nodiscard]] std::byte byte_at(std::size_t index) const;
   [[nodiscard]] std::byte bit_at(std::size_t index) const;
 
-  [[nodiscard]] ConstIterator cbegin() const noexcept {
-    if (buffer_.empty()) {
-      return ConstIterator{nullptr};
-    }
-    return ConstIterator{&buffer_.front()};
-  }
-  [[nodiscard]] ConstIterator cend() const noexcept {
-    if (buffer_.empty()) {
-      return ConstIterator{nullptr};
-    }
-    return ConstIterator{&buffer_.back(), size_bits_};
-  }
+  [[nodiscard]] ConstIterator cbegin() const noexcept;
+  [[nodiscard]] ConstIterator cend() const noexcept;
 
 private:
   std::size_t size_bits_{};

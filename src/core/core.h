@@ -7,6 +7,7 @@
 
 #include "types.h"
 #include "codec.h"
+#include "TimeSeries.h"
 #include "BitBuffer.h"
 
 #endif  // TIMESERIESENGINE_CORE_H

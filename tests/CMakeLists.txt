@@ -1,9 +1,11 @@
 project(tests)
 add_subdirectory(lib/googletest)
 
-add_executable(tests BitBufferTest.cpp
+add_executable(tests
+        BitBufferTest.cpp
         CodecTest.cpp
-        util.h)
+        TimeSeriesTest.cpp
+)
 target_link_libraries(tests PRIVATE
         TimeSeriesEngine_Core
         gtest

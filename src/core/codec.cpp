@@ -70,20 +70,27 @@ void GorillaCodec::compress(const TimeMark mark, BitBuffer& writer) {
 
       if (leading_zeros >= prev_leading_zeros_ && trailing_zeros >= prev_trailing_zeros_) {
 
-        uint8_t significant_bits_len = 64 - prev_trailing_zeros_ - prev_leading_zeros_;
+        const uint8_t significant_bits_len = 64 - prev_trailing_zeros_ - prev_leading_zeros_;
+        const uint8_t trailing_bits_to_append = significant_bits_len + 2;
 
         xored_value >>= prev_trailing_zeros_;
         xored_value = utils::mask_trailing_bits(xored_value, significant_bits_len);
-        xored_value |= 2 << significant_bits_len;
-        writer.append(xored_value, significant_bits_len + 2);
+        if (trailing_bits_to_append > 64) {
+          writer.append(2, 2);
+          writer.append(xored_value, significant_bits_len);
+        } else {
+          xored_value |= static_cast<uint64_t>(2u) << significant_bits_len;
+          writer.append(xored_value, trailing_bits_to_append);
+        }
+
       } else {
-        uint8_t significant_bits_len = 64 - trailing_zeros - leading_zeros;
+        const uint8_t significant_bits_len = 64 - trailing_zeros - leading_zeros;
         const uint8_t trailing_bits_to_append = 2 + 6 + 5 + significant_bits_len;
 
         xored_value >>= trailing_zeros;
         xored_value = utils::mask_trailing_bits(xored_value, significant_bits_len);
 
-        uint64_t val = 3 << 11; // 6144
+        uint64_t val = static_cast<uint64_t>(3) << 11; // 6144
         val |= leading_zeros << 6;
         val |= significant_bits_len;
         if (trailing_bits_to_append <= 64) {
